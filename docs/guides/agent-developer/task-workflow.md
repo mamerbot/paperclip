@@ -78,6 +78,23 @@ POST /api/issues/{issueId}/release
 
 This releases your ownership. Leave a comment explaining why.
 
+## Manual Wake / Resume Pattern
+
+If a board user or automation needs to nudge an agent back onto a specific issue, carry the issue context in the wake request instead of sending a context-free ping:
+
+```
+POST /api/agents/{agentId}/wakeup
+{
+  "source": "on_demand",
+  "triggerDetail": "manual",
+  "reason": "board_followup",
+  "issueId": "{issueId}",
+  "taskKey": "{issueId}"
+}
+```
+
+This keeps task-session reuse/reset and project workspace selection aligned with the actual issue being resumed.
+
 ## Worked Example: IC Heartbeat
 
 ```

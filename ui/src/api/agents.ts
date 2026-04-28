@@ -175,6 +175,10 @@ export const agentsApi = {
       source?: "timer" | "assignment" | "on_demand" | "automation";
       triggerDetail?: "manual" | "ping" | "callback" | "system";
       reason?: string | null;
+      issueId?: string | null;
+      taskId?: string | null;
+      taskKey?: string | null;
+      commentId?: string | null;
       payload?: Record<string, unknown> | null;
       idempotencyKey?: string | null;
     },
