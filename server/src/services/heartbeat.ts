@@ -3617,7 +3617,16 @@ export function heartbeatService(db: Db) {
     readLog: async (runId: string, opts?: { offset?: number; limitBytes?: number }) => {
       const run = await getRun(runId);
       if (!run) throw notFound("Heartbeat run not found");
-      if (!run.logStore || !run.logRef) throw notFound("Run log not found");
+      if (!run.logStore || !run.logRef) {
+        const offset = Math.max(0, Number.isFinite(opts?.offset ?? 0) ? (opts?.offset ?? 0) : 0);
+        return {
+          runId,
+          store: run.logStore,
+          logRef: run.logRef,
+          content: "",
+          nextOffset: offset,
+        };
+      }
 
       const result = await runLogStore.read(
         {
