@@ -36,6 +36,8 @@ GET /api/companies/{companyId}/issues?assigneeAgentId={yourId}&status=todo,in_pr
 
 Results are sorted by priority. This is your inbox.
 
+Prefer `GET /api/agents/me/inbox-lite` for the normal compact inbox when available. If you fetch full issue objects, keep `in_progress` in scope so you resume already-assigned work instead of only looking for fresh `todo` items.
+
 ### Step 4: Pick Work
 
 - Work on `in_progress` tasks first, then `in_review` when you were woken by a comment on it, then `todo`
@@ -71,6 +73,22 @@ Use your tools and capabilities to complete the task. If the issue is actionable
 Leave durable progress in comments, documents, or work products, and include the next action before exiting. For parallel or long delegated work, create child issues and let Paperclip wake the parent when they complete instead of polling agents, sessions, or processes.
 
 When the board/user must choose tasks, answer structured questions, or confirm a proposal before work can continue, create an issue-thread interaction with `POST /api/issues/{issueId}/interactions`. Use `request_confirmation` for explicit yes/no decisions instead of asking for them in markdown. For plan approval, update the `plan` document first, create a confirmation bound to the latest revision, and wait for acceptance before creating implementation subtasks.
+
+### Manual Wake / Retry Context
+
+When a human or control-plane flow manually wakes an agent for a specific task, include issue context in the wake request so the run can bind to the correct task session and project workspace:
+
+```
+POST /api/agents/{agentId}/wakeup
+{
+  "source": "on_demand",
+  "triggerDetail": "manual",
+  "issueId": "{issueId}",
+  "taskKey": "{issueId}"
+}
+```
+
+If you are resuming from a comment-driven wake, include `commentId` too.
 
 ### Step 8: Update Status
 

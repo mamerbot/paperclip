@@ -2919,11 +2919,19 @@ export function agentRoutes(
       await assertBoardCanManageAgentsForCompany(req, agent.companyId);
     }
 
+    const wakePayload: Record<string, unknown> = {
+      ...(req.body.payload ?? {}),
+    };
+    if (typeof req.body.issueId === "string" && req.body.issueId.trim()) wakePayload.issueId = req.body.issueId.trim();
+    if (typeof req.body.taskId === "string" && req.body.taskId.trim()) wakePayload.taskId = req.body.taskId.trim();
+    if (typeof req.body.taskKey === "string" && req.body.taskKey.trim()) wakePayload.taskKey = req.body.taskKey.trim();
+    if (typeof req.body.commentId === "string" && req.body.commentId.trim()) wakePayload.commentId = req.body.commentId.trim();
+
     const run = await heartbeat.wakeup(id, {
       source: opts.source,
       triggerDetail: req.body.triggerDetail ?? "manual",
       reason: req.body.reason ?? null,
-      payload: req.body.payload ?? null,
+      payload: Object.keys(wakePayload).length > 0 ? wakePayload : null,
       idempotencyKey: req.body.idempotencyKey ?? null,
       requestedByActorType: req.actor.type === "agent" ? "agent" : "user",
       requestedByActorId: req.actor.type === "agent" ? req.actor.agentId ?? null : req.actor.userId ?? null,
