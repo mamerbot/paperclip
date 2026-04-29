@@ -37,6 +37,17 @@ Changes:
 
 ## Still live-state / not fully codified
 
+### EMT-11 codified in the fork via dependency patch
+Fork-local source-of-truth for the stale Hermes adapter prompt now lives in:
+- `package.json` -> `pnpm.patchedDependencies`
+- `patches/hermes-paperclip-adapter@0.1.1.patch`
+- `server/src/__tests__/hermes-paperclip-adapter-template.test.ts`
+
+Rollout path on Raven:
+1. `pnpm install` in the Paperclip repo so pnpm reapplies the patched dependency.
+2. Rebuild/redeploy the Paperclip server runtime that vendors `hermes-paperclip-adapter`.
+3. Wake an affected agent and verify the generated prompt uses Python `urllib.request` guidance and includes assigned `in_progress` work.
+
 ### A) Fallback workspace on live Monica runs
 Observed in live run logs:
 - `No project or prior session workspace was available. Using fallback workspace ...`

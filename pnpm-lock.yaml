@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  hermes-paperclip-adapter@0.1.1:
+    hash: nucpv5wmji66fjxsd3fd7ha6lm
+    path: patches/hermes-paperclip-adapter@0.1.1.patch
+
 importers:
 
   .:
@@ -500,7 +505,7 @@ importers:
         version: 5.2.1
       hermes-paperclip-adapter:
         specifier: 0.1.1
-        version: 0.1.1
+        version: 0.1.1(patch_hash=nucpv5wmji66fjxsd3fd7ha6lm)
       jsdom:
         specifier: ^28.1.0
         version: 28.1.0(@noble/hashes@2.0.1)
@@ -10326,7 +10331,7 @@ snapshots:
 
   help-me@5.0.0: {}
 
-  hermes-paperclip-adapter@0.1.1:
+  hermes-paperclip-adapter@0.1.1(patch_hash=nucpv5wmji66fjxsd3fd7ha6lm):
     dependencies:
       '@paperclipai/adapter-utils': 0.3.1
       picocolors: 1.1.1
