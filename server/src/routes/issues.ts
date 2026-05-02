@@ -8,6 +8,7 @@ import {
   createIssueLabelSchema,
   checkoutIssueSchema,
   createIssueSchema,
+  ISSUE_STATUSES,
   linkIssueApprovalSchema,
   issueDocumentKeySchema,
   updateIssueWorkProductSchema,
@@ -31,13 +32,31 @@ import {
   workProductService,
 } from "../services/index.js";
 import { logger } from "../middleware/logger.js";
-import { forbidden, HttpError, unauthorized } from "../errors.js";
+import { badRequest, forbidden, HttpError, unauthorized } from "../errors.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { shouldWakeAssigneeOnCheckout } from "./issues-checkout-wakeup.js";
 import { isAllowedContentType, MAX_ATTACHMENT_BYTES } from "../attachment-types.js";
 import { queueIssueAssignmentWakeup } from "../services/issue-assignment-wakeup.js";
 
 const MAX_ISSUE_COMMENT_LIMIT = 500;
+
+function normalizeCsvQueryParam(value: unknown): string | undefined {
+  const entries =
+    typeof value === "string"
+      ? value.split(",")
+      : Array.isArray(value)
+        ? value.flatMap((entry) => (typeof entry === "string" ? entry.split(",") : []))
+        : [];
+  const normalizedEntries = entries.map((entry) => entry.trim()).filter(Boolean);
+  if (normalizedEntries.length === 0) return undefined;
+
+  const invalidStatuses = [...new Set(normalizedEntries.filter((entry) => !ISSUE_STATUSES.includes(entry as any)))];
+  if (invalidStatuses.length > 0) {
+    throw badRequest("Invalid issue status filter", { invalidStatuses });
+  }
+
+  return normalizedEntries.join(",");
+}
 
 export function issueRoutes(db: Db, storage: StorageService) {
   const router = Router();
@@ -231,7 +250,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
     }
 
     const result = await svc.list(companyId, {
-      status: req.query.status as string | undefined,
+      status: normalizeCsvQueryParam(req.query.status),
       assigneeAgentId: req.query.assigneeAgentId as string | undefined,
       assigneeUserId,
       touchedByUserId,
