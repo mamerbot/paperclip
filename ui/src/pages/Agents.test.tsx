@@ -1,31 +1,20 @@
-// @vitest-environment jsdom
+// @vitest-environment node
 
-import { act } from "react";
-import type { ReactNode } from "react";
-import { createRoot } from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { Agent } from "@paperclipai/shared";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Agents } from "./Agents";
+import { describe, expect, it, vi } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
 
-const mockAgentsApi = vi.hoisted(() => ({
-  list: vi.fn(),
-  org: vi.fn(),
+const useQueryMock = vi.fn();
+
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: (...args: unknown[]) => useQueryMock(...args),
 }));
-
-const mockHeartbeatsApi = vi.hoisted(() => ({
-  liveRunsForCompany: vi.fn(),
-}));
-
-const mockOpenNewAgent = vi.hoisted(() => vi.fn());
-const mockSetBreadcrumbs = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/router", () => ({
-  Link: ({ children, to, ...props }: { children: ReactNode; to: string }) => (
+  Link: ({ to, children, ...props }: { to: string; children: React.ReactNode }) => (
     <a href={to} {...props}>{children}</a>
   ),
-  useLocation: () => ({ pathname: "/agents/all", search: "", hash: "", state: null }),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => () => {},
+  useLocation: () => ({ pathname: "/agents/all" }),
 }));
 
 vi.mock("../context/CompanyContext", () => ({
@@ -33,121 +22,88 @@ vi.mock("../context/CompanyContext", () => ({
 }));
 
 vi.mock("../context/DialogContext", () => ({
-  useDialogActions: () => ({ openNewAgent: mockOpenNewAgent }),
+  useDialog: () => ({ openNewAgent: () => {} }),
 }));
 
 vi.mock("../context/BreadcrumbContext", () => ({
-  useBreadcrumbs: () => ({ setBreadcrumbs: mockSetBreadcrumbs }),
+  useBreadcrumbs: () => ({ setBreadcrumbs: () => {} }),
 }));
 
 vi.mock("../context/SidebarContext", () => ({
-  useSidebar: () => ({ isMobile: false }),
+  useSidebar: () => ({ isMobile: true, setSidebarOpen: () => {} }),
 }));
 
-vi.mock("../api/agents", () => ({
-  agentsApi: mockAgentsApi,
+vi.mock("../components/StatusBadge", () => ({
+  StatusBadge: ({ status }: { status: string }) => <span>{status}</span>,
 }));
 
-vi.mock("../api/heartbeats", () => ({
-  heartbeatsApi: mockHeartbeatsApi,
+vi.mock("../components/PageTabBar", () => ({
+  PageTabBar: () => <div>tabs</div>,
 }));
 
-vi.mock("../adapters/adapter-display-registry", () => ({
-  getAdapterLabel: (type: string) => type,
+vi.mock("@/components/ui/tabs", () => ({
+  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+vi.mock("@/components/ui/button", () => ({
+  Button: ({ children, ...props }: { children: React.ReactNode }) => <button {...props}>{children}</button>,
+}));
 
-function makeAgent(overrides: Partial<Agent>): Agent {
-  return {
-    id: "agent-1",
-    companyId: "company-1",
-    name: "Alpha",
-    urlKey: "alpha",
-    role: "engineer",
-    title: null,
-    icon: null,
-    status: "active",
-    reportsTo: null,
-    capabilities: null,
-    adapterType: "codex_local",
-    adapterConfig: {},
-    runtimeConfig: {},
-    budgetMonthlyCents: 0,
-    spentMonthlyCents: 0,
-    pauseReason: null,
-    pausedAt: null,
-    permissions: { canCreateAgents: false },
-    lastHeartbeatAt: null,
-    metadata: null,
-    createdAt: new Date("2026-01-01T00:00:00Z"),
-    updatedAt: new Date("2026-01-01T00:00:00Z"),
-    ...overrides,
-  };
-}
+vi.mock("../components/EmptyState", () => ({
+  EmptyState: ({ message }: { message: string }) => <div>{message}</div>,
+}));
 
-async function flushReact() {
-  await act(async () => {
-    await Promise.resolve();
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-  });
-}
+vi.mock("../components/PageSkeleton", () => ({
+  PageSkeleton: () => <div>Loading</div>,
+}));
 
-describe("Agents", () => {
-  let container: HTMLDivElement;
-  let root: ReturnType<typeof createRoot> | null;
-  let queryClient: QueryClient;
+import { Agents } from "./Agents";
 
-  beforeEach(() => {
-    container = document.createElement("div");
-    document.body.appendChild(container);
-    root = null;
-    queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-
-    mockAgentsApi.list.mockResolvedValue([
-      makeAgent({ adapterConfig: { model: "gpt-5.4" } }),
-    ]);
-    mockAgentsApi.org.mockResolvedValue([
-      {
-        id: "agent-1",
-        name: "Alpha",
-        role: "engineer",
-        status: "active",
-        reports: [],
-      },
-    ]);
-    mockHeartbeatsApi.liveRunsForCompany.mockResolvedValue([]);
-  });
-
-  afterEach(async () => {
-    const currentRoot = root;
-    if (currentRoot) {
-      await act(async () => {
-        currentRoot.unmount();
+describe("Agents visual system", () => {
+  it("renders live-run links as plated readouts instead of pulsing round dots", () => {
+    useQueryMock
+      .mockReturnValueOnce({
+        data: [
+          {
+            id: "agent-1",
+            name: "Jony",
+            role: "engineering",
+            title: "Lead Industrialist",
+            status: "active",
+            adapterType: "hermes_local",
+            lastHeartbeatAt: new Date("2026-05-08T07:45:00Z").toISOString(),
+          },
+        ],
+        isLoading: false,
+        error: null,
+      })
+      .mockReturnValueOnce({
+        data: [
+          {
+            id: "org-ignored",
+            name: "ignored",
+            status: "active",
+            role: "engineering",
+            reports: [],
+          },
+        ],
+      })
+      .mockReturnValueOnce({
+        data: [
+          {
+            id: "run-1",
+            agentId: "agent-1",
+            status: "running",
+          },
+        ],
       });
-    }
-    queryClient.clear();
-    container.remove();
-    document.body.innerHTML = "";
-    vi.clearAllMocks();
-  });
 
-  it("shows the configured model beside the adapter on the all agents page", async () => {
-    root = createRoot(container);
-    await act(async () => {
-      root!.render(
-        <QueryClientProvider client={queryClient}>
-          <Agents />
-        </QueryClientProvider>,
-      );
-    });
-    await flushReact();
-    await flushReact();
+    const html = renderToStaticMarkup(<Agents />);
 
-    expect(container.textContent).toContain("codex_local");
-    expect(container.textContent).toContain("gpt-5.4");
+    expect(html).toContain('data-agent-live-badge="true"');
+    expect(html).toContain('data-agent-live-glyph="plate"');
+    expect(html).toContain("LIVE");
+    expect(html).not.toContain("animate-pulse");
+    expect(html).not.toContain("rounded-full bg-[var(--status-live-fg)]");
   });
 });
