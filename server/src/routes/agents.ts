@@ -2714,7 +2714,13 @@ export function agentRoutes(
   });
 
   router.get("/heartbeat-runs/:runId/log", async (req, res) => {
-    const runId = req.params.runId as string;
+    const rawRunId = req.params.runId as string;
+    if (!isUuidLike(rawRunId)) {
+      res.status(400).json({ error: "Heartbeat run id must be a UUID" });
+      return;
+    }
+
+    const runId = rawRunId.trim();
     const run = await heartbeat.getRunLogAccess(runId);
     if (!run) {
       res.status(404).json({ error: "Heartbeat run not found" });
